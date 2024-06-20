@@ -117,10 +117,13 @@ func (tf *factory) makeDockerFileOrNetworkProtocolSource(source *sources.LogSour
 	f.Close()
 
 	sourceName, serviceName := tf.defaultSourceAndService(source, containersorpods.LogContainers)
-
+	configType := source.Config.Type
+	if source.Config.Type == "docker" || source.Config.Type == "podman" {
+		configType = config.FileType
+	}
 	// New file source that inherits most of its parent's properties
 	fileOrNetworkProtocolsource := sources.NewLogSource(source.Name, &config.LogsConfig{
-		Type:                        source.Config.Type,
+		Type:                        configType,
 		TailingMode:                 source.Config.TailingMode,
 		Identifier:                  containerID,
 		Path:                        path,
@@ -206,11 +209,17 @@ func (tf *factory) makeK8sFileOrNetworkProtocolSource(source *sources.LogSource)
 	// kubernetes-launcher behavior.
 
 	sourceName, serviceName := tf.defaultSourceAndService(source, containersorpods.LogPods)
+
+	configType := source.Config.Type
+	if source.Config.Type == "docker" || source.Config.Type == "podman" {
+		configType = config.FileType
+	}
+
 	// New file source that inherits most of its parent's properties
 	fileSource := sources.NewLogSource(
 		fmt.Sprintf("%s/%s/%s", pod.Namespace, pod.Name, container.Name),
 		&config.LogsConfig{
-			Type:                        source.Config.Type,
+			Type:                        configType,
 			TailingMode:                 source.Config.TailingMode,
 			Identifier:                  containerID,
 			Path:                        path,
