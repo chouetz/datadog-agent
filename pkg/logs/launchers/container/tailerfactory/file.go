@@ -118,7 +118,7 @@ func (tf *factory) makeDockerFileOrNetworkProtocolSource(source *sources.LogSour
 
 	sourceName, serviceName := tf.defaultSourceAndService(source, containersorpods.LogContainers)
 	configType := source.Config.Type
-	if source.Config.Type == "docker" || source.Config.Type == "podman" {
+	if source.Config.Type == "docker" || source.Config.Type == "podman" || source.Config.Type == "containerd" {
 		configType = config.FileType
 	}
 	fmt.Println("andrewqian", configType)
@@ -212,7 +212,7 @@ func (tf *factory) makeK8sFileOrNetworkProtocolSource(source *sources.LogSource)
 	sourceName, serviceName := tf.defaultSourceAndService(source, containersorpods.LogPods)
 
 	configType := source.Config.Type
-	if source.Config.Type == "docker" || source.Config.Type == "podman" {
+	if source.Config.Type == "docker" || source.Config.Type == "podman" || source.Config.Type == "containerd" {
 		configType = config.FileType
 	}
 	fmt.Println("andrewqian", configType)
