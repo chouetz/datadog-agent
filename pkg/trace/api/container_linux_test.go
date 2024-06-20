@@ -112,12 +112,21 @@ func TestGetContainerID(t *testing.T) {
 		assert.Equal(t, containerID, provider.GetContainerID(req.Context(), req.Header))
 	})
 
-	t.Run("entity header wrapping cid", func(t *testing.T) {
+	t.Run("entity header wrapping cid old format", func(t *testing.T) {
 		req, err := http.NewRequest("GET", "http://example.com", nil)
 		if !assert.NoError(t, err) {
 			t.Fail()
 		}
 		req.Header.Add(header.EntityID, "cid-"+containerID)
+		assert.Equal(t, containerID, provider.GetContainerID(req.Context(), req.Header))
+	})
+
+	t.Run("entity header wrapping cid new format", func(t *testing.T) {
+		req, err := http.NewRequest("GET", "http://example.com", nil)
+		if !assert.NoError(t, err) {
+			t.Fail()
+		}
+		req.Header.Add(header.EntityID, "ci-"+containerID)
 		assert.Equal(t, containerID, provider.GetContainerID(req.Context(), req.Header))
 	})
 

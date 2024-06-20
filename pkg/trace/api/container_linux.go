@@ -150,12 +150,18 @@ func (c *cgroupIDProvider) GetContainerID(ctx context.Context, h http.Header) st
 
 // resolveContainerIDFromEntityID returns the container ID for the given entity ID.
 // This is a fallback for when the container ID is not available in the http header.
+// The entity ID can be either:
+// * "cid-<container-id>" or "ci-<container-id>" for the container ID.
+// * "in-<cgroupv2-inode>" for the cgroupv2 inode.
 func (c *cgroupIDProvider) resolveContainerIDFromEntityID(eid string) string {
-	// The entityID can contain the container ID directly
-	if strings.HasPrefix(eid, "cid-") {
+	// The Entity ID can contain the container ID.
+	if strings.HasPrefix(eid, "cid-") { // Old format: cid-<container-id>
 		return eid[4:]
+	} else if strings.HasPrefix(eid, "ci-") { //	New format: ci-<container-id>
+		return eid[3:]
 	}
-	// The entityID can contain the cgroupv2 node inode
+
+	// The Entity ID can contain the cgroupv2 inode.
 	if !strings.HasPrefix(eid, "in-") {
 		return ""
 	}

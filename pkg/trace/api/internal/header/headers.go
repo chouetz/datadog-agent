@@ -13,12 +13,14 @@ const (
 
 	// ContainerID specifies the name of the header which contains the ID of the
 	// container where the request originated.
+	// Deprecated in favor of Datadog-Entity-ID.
 	ContainerID = "Datadog-Container-ID"
 
-	// EntityID specifies the name of the header which contains entityID of the
-	// sender of the payload. This entityID can either be "cid-<container-id>", or
-	// "in-<cgroupv2-inode>" and is used to retrieve the container-id. It could be
-	// extended to support other entities such as the pid.
+	// EntityID specifies the name of the header which contains the Entity ID of
+	// the sender of the payload. This Entity ID can either be:
+	// * "cid-<container-id>" or "ci-<container-id>" for the container ID.
+	// * "in-<cgroupv2-inode>" for the cgroupv2 inode.
+	// It could be extended to support other entities such as the pid.
 	EntityID = "Datadog-Entity-ID"
 
 	// Lang specifies the name of the header which contains the language from
