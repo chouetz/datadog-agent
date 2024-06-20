@@ -172,7 +172,7 @@ func (tf *factory) findDockerLogPath(containerID string) string {
 	}
 }
 
-// makeK8sFileSource makes a LogSource with Config.Type="file" for a container in a K8s pod.
+// makeK8sFileOrNetworkProtocolSource makes a LogSource with Config.Type equal to file or UDP or TCP for a container in a K8s pod.
 func (tf *factory) makeK8sFileOrNetworkProtocolSource(source *sources.LogSource) (*sources.LogSource, error) {
 	containerID := source.Config.Identifier
 
