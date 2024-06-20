@@ -38,11 +38,11 @@ var podmanLogsBasePath = "/var/lib/containers"
 // makeFileOrNetworkProtocolSource makes a file, udp, or tcp tailer for the given source, or returns
 // an error if it cannot do so (e.g., due to permission errors)
 func (tf *factory) makeFileOrNetworkProtocolTailer(source *sources.LogSource) (Tailer, error) {
-	fileSource, err := tf.makeFileOrNetworkProtocolSource(source)
+	fileOrNetworkProtocolsource, err := tf.makeFileOrNetworkProtocolSource(source)
 	if err != nil {
 		return nil, err
 	}
-	return tf.attachChildSource(source, fileSource)
+	return tf.attachChildSource(source, fileOrNetworkProtocolsource)
 }
 
 // makeFileOrNetworkProtocolSource makes a new LogSource with Config.Type equal to "file" or "tcp" or "udp" to log the
@@ -215,7 +215,7 @@ func (tf *factory) makeK8sFileOrNetworkProtocolSource(source *sources.LogSource)
 		configType = config.FileType
 	}
 	// New file source that inherits most of its parent's properties
-	fileSource := sources.NewLogSource(
+	fileOrNetworkProtocolsource := sources.NewLogSource(
 		fmt.Sprintf("%s/%s/%s", pod.Namespace, pod.Name, container.Name),
 		&config.LogsConfig{
 			Type:                        configType,
@@ -234,13 +234,13 @@ func (tf *factory) makeK8sFileOrNetworkProtocolSource(source *sources.LogSource)
 	switch source.Config.Type {
 	case config.DockerType:
 		// docker runtime uses SourceType "docker"
-		fileSource.SetSourceType(sources.DockerSourceType)
+		fileOrNetworkProtocolsource.SetSourceType(sources.DockerSourceType)
 	default:
 		// containerd runtime uses SourceType "kubernetes"
-		fileSource.SetSourceType(sources.KubernetesSourceType)
+		fileOrNetworkProtocolsource.SetSourceType(sources.KubernetesSourceType)
 	}
 
-	return fileSource, nil
+	return fileOrNetworkProtocolsource, nil
 }
 
 // findK8sLogPath returns a wildcard matching logs files for the given container in pod.
