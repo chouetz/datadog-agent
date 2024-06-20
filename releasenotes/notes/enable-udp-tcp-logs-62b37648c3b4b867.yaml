@@ -8,5 +8,5 @@
 ---
 enhancements:
   - |
-    Enabled support for logs sent via TCP/UDP 
+    Enable UDP/TCP logs when running the containerized Agent
 
