@@ -1991,7 +1991,9 @@ func (s *TracerSuite) TestEbpfTelemetry() {
 		t.Skip("HTTPS feature not available/supported for this setup")
 	}
 
-	tr := setupTracer(t, cfg)
+	_ = setupTracer(t, cfg)
+	c := ebpftelemetry.NewEBPFErrorsCollector()
+	require.NotNilf(t, c, "Failed to initialize ebpf telemetry collector")
 
 	expectedErrorTP := "tracepoint__syscalls__sys_enter_openat"
 	syscallNumber := syscall.SYS_OPENAT
@@ -2017,7 +2019,7 @@ func (s *TracerSuite) TestEbpfTelemetry() {
 	//trigger collector in a separate goroutine
 	ch := make(chan prometheus.Metric)
 	go func() {
-		tr.bpfErrorsCollector.Collect(ch)
+		c.Collect(ch)
 		close(ch)
 	}()
 
