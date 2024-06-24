@@ -117,9 +117,9 @@ func (tf *factory) makeDockerFileOrNetworkProtocolSource(source *sources.LogSour
 	f.Close()
 
 	sourceName, serviceName := tf.defaultSourceAndService(source, containersorpods.LogContainers)
-	configType := source.Config.Type
-	if source.Config.Type == "docker" || source.Config.Type == "podman" || source.Config.Type == "containerd" {
-		configType = config.FileType
+	configType := config.FileType
+	if source.Config.Type == "udp" || source.Config.Type == "tcp" {
+		configType = source.Config.Type
 	}
 	// New file source that inherits most of its parent's properties
 	fileOrNetworkProtocolsource := sources.NewLogSource(source.Name, &config.LogsConfig{
@@ -210,9 +210,9 @@ func (tf *factory) makeK8sFileOrNetworkProtocolSource(source *sources.LogSource)
 
 	sourceName, serviceName := tf.defaultSourceAndService(source, containersorpods.LogPods)
 
-	configType := source.Config.Type
-	if source.Config.Type == "docker" || source.Config.Type == "podman" || source.Config.Type == "containerd" {
-		configType = config.FileType
+	configType := config.FileType
+	if source.Config.Type == "udp" || source.Config.Type == "tcp" {
+		configType = source.Config.Type
 	}
 	// New file source that inherits most of its parent's properties
 	fileOrNetworkProtocolsource := sources.NewLogSource(
