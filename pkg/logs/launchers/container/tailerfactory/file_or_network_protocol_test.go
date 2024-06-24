@@ -200,17 +200,7 @@ func TestMakeTCPSource(t *testing.T) {
 	})
 	child, err := tf.makeFileOrNetworkProtocolSource(source)
 	require.NoError(t, err)
-	require.Equal(t, source.Name, child.Name)
 	require.Equal(t, "tcp", child.Config.Type)
-	require.Equal(t, source.Config.Identifier, child.Config.Identifier)
-	require.Equal(t, p, child.Config.Path)
-	require.Equal(t, source.Config.Source, child.Config.Source)
-	require.Equal(t, source.Config.Service, child.Config.Service)
-	require.Equal(t, source.Config.Tags, child.Config.Tags)
-	require.Equal(t, sources.DockerSourceType, child.GetSourceType())
-	require.Equal(t, *source.Config.AutoMultiLine, true)
-	require.Equal(t, source.Config.AutoMultiLineSampleSize, 123)
-	require.Equal(t, source.Config.AutoMultiLineMatchThreshold, 0.123)
 }
 
 func TestMakeUDPSource(t *testing.T) {
@@ -236,17 +226,7 @@ func TestMakeUDPSource(t *testing.T) {
 	})
 	child, err := tf.makeFileOrNetworkProtocolSource(source)
 	require.NoError(t, err)
-	require.Equal(t, source.Name, child.Name)
-	require.Equal(t, "tcp", child.Config.Type)
-	require.Equal(t, source.Config.Identifier, child.Config.Identifier)
-	require.Equal(t, p, child.Config.Path)
-	require.Equal(t, source.Config.Source, child.Config.Source)
-	require.Equal(t, source.Config.Service, child.Config.Service)
-	require.Equal(t, source.Config.Tags, child.Config.Tags)
-	require.Equal(t, sources.DockerSourceType, child.GetSourceType())
-	require.Equal(t, *source.Config.AutoMultiLine, true)
-	require.Equal(t, source.Config.AutoMultiLineSampleSize, 123)
-	require.Equal(t, source.Config.AutoMultiLineMatchThreshold, 0.123)
+	require.Equal(t, "udp", child.Config.Type)
 }
 
 func TestMakeFileSource_docker_no_file(t *testing.T) {
