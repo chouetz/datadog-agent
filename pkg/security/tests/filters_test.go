@@ -169,6 +169,10 @@ func TestFilterOpenLeafDiscarder(t *testing.T) {
 func TestFilterOpenLeafDiscarderActivityDump(t *testing.T) {
 	SkipIfNotAvailable(t)
 
+	// skip test that are about to be run on docker (to avoid trying spawning docker in docker)
+	if testEnvironment == DockerEnvironment {
+		t.Skip("Skip test spawning docker containers on docker")
+	}
 	// We need to write a rule with no approver on the file path, and that won't match the real opened file (so that
 	// a discarder is created).
 	rule := &rules.RuleDefinition{
