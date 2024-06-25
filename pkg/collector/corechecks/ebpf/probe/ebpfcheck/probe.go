@@ -57,6 +57,8 @@ type Probe struct {
 	mapBuffers            entryCountBuffers
 	entryCountMaxRestarts int
 
+	mphCache *mapProgHelperCache
+
 	nrcpus uint32
 }
 
@@ -95,6 +97,8 @@ func NewProbe(cfg *ddebpf.Config) (*Probe, error) {
 	probe.mapBuffers.valuesBufferSizeLimit = uint32(ddconfig.SystemProbe.GetInt("ebpf_check.entry_count.max_values_buffer_size_bytes"))
 	probe.mapBuffers.iterationRestartDetectionEntries = ddconfig.SystemProbe.GetInt("ebpf_check.entry_count.entries_for_iteration_restart_detection")
 	probe.entryCountMaxRestarts = ddconfig.SystemProbe.GetInt("ebpf_check.entry_count.max_restarts")
+
+	probe.mphCache = newMapProgHelperCache()
 
 	log.Debugf("successfully loaded ebpf check probe")
 	return probe, nil
@@ -202,6 +206,9 @@ func (k *Probe) Close() {
 			log.Warnf("error unlinking program: %s", err)
 		}
 	}
+
+	k.mphCache.Close()
+
 	k.coll.Close()
 	if k.statsFD != nil {
 		_ = k.statsFD.Close()
@@ -366,7 +373,7 @@ func (k *Probe) getMapStats(stats *model.EBPFStats) error {
 			if module != "unknown" {
 				// hashMapNumberOfEntries might allocate memory, so we only do it if we have a module name, as
 				// unknown modules get discarded anyway (only RSS is used for total counts)
-				baseMapStats.Entries = hashMapNumberOfEntries(mp, mapid, &k.mapBuffers, k.entryCountMaxRestarts)
+				baseMapStats.Entries = hashMapNumberOfEntries(mp, mapid, k.mphCache, &k.mapBuffers, k.entryCountMaxRestarts)
 			}
 		case ebpf.Array, ebpf.PerCPUArray, ebpf.ProgramArray, ebpf.CGroupArray, ebpf.ArrayOfMaps:
 			baseMapStats.MaxSize, baseMapStats.RSS = arrayMemoryUsage(info, uint64(k.nrcpus))
@@ -397,7 +404,7 @@ func (k *Probe) getMapStats(stats *model.EBPFStats) error {
 	k.mapBuffers.resetBuffers()
 
 	// Close unused programs in the prog helper cache
-	mphCache.closeUnusedPrograms()
+	k.mphCache.closeUnusedPrograms()
 
 	return nil
 }
@@ -897,15 +904,15 @@ func hashMapNumberOfEntriesWithIteration(mp *ebpf.Map, buffers *entryCountBuffer
 	return numElements, nil
 }
 
-func hashMapNumberOfEntries(mp *ebpf.Map, mapid ebpf.MapID, buffers *entryCountBuffers, maxRestarts int) int64 {
+func hashMapNumberOfEntries(mp *ebpf.Map, mapid ebpf.MapID, mphCache *mapProgHelperCache, buffers *entryCountBuffers, maxRestarts int) int64 {
 	if isPerCPU(mp.Type()) {
 		return -1
 	}
 
 	var numElements int64
 	var err error
-	if isForEachElemHelperAvailable() && mp.Type() != ebpf.HashOfMaps && mapid != 0 {
-		numElements, err = hashMapNumberOfEntriesWithHelper(mp, mapid)
+	if mphCache != nil && isForEachElemHelperAvailable() && mp.Type() != ebpf.HashOfMaps && mapid != 0 {
+		numElements, err = hashMapNumberOfEntriesWithHelper(mp, mapid, mphCache)
 	} else if ddmaps.BatchAPISupported() && mp.Type() != ebpf.HashOfMaps { // HashOfMaps doesn't work with batch API
 		numElements, err = hashMapNumberOfEntriesWithBatch(mp, buffers, maxRestarts)
 	} else {
@@ -923,7 +930,7 @@ func isForEachElemHelperAvailable() bool {
 	return features.HaveProgramHelper(ebpf.SocketFilter, asm.FnForEachMapElem) == nil
 }
 
-func hashMapNumberOfEntriesWithHelper(mp *ebpf.Map, mapid ebpf.MapID) (int64, error) {
+func hashMapNumberOfEntriesWithHelper(mp *ebpf.Map, mapid ebpf.MapID, mphCache *mapProgHelperCache) (int64, error) {
 	prog, err := mphCache.newCachedProgramForMap(mp, mapid)
 	if err != nil {
 		return 0, err

@@ -12,6 +12,7 @@ import (
 	"sync"
 
 	ddebpf "github.com/DataDog/datadog-agent/pkg/ebpf"
+	"github.com/DataDog/datadog-agent/pkg/util/log"
 	"github.com/cilium/ebpf"
 	"github.com/cilium/ebpf/asm"
 	"github.com/cilium/ebpf/btf"
@@ -24,8 +25,6 @@ type mapProgHelperCache struct {
 	entryBtf    *btf.Func
 	callbackBtf *btf.Func
 }
-
-var mphCache = newMapProgHelperCache()
 
 func newMapProgHelperCache() *mapProgHelperCache {
 	entryBtf := &btf.Func{
@@ -171,6 +170,19 @@ func (c *mapProgHelperCache) newHelperProgramForFd(fd int) (helperProgData, erro
 	}, nil
 }
 
+func (c *mapProgHelperCache) Close() {
+	c.cacheLock.Lock()
+	defer c.cacheLock.Unlock()
+
+	for _, data := range c.cache {
+		if err := data.prog.Close(); err != nil {
+			log.Warnf("failed to close helper program: %v", err)
+		}
+		ddebpf.RemoveIgnoredProgramID(data.id)
+	}
+	clear(c.cache)
+}
+
 func (c *mapProgHelperCache) closeUnusedPrograms() {
 	c.cacheLock.Lock()
 	defer c.cacheLock.Unlock()
@@ -179,7 +191,9 @@ func (c *mapProgHelperCache) closeUnusedPrograms() {
 		_, err := ddebpf.GetMapNameFromMapID(uint32(id))
 		if err != nil {
 			// the mapping is no longer existent so we can safely remove the program
-			data.prog.Close()
+			if err := data.prog.Close(); err != nil {
+				log.Warnf("failed to close helper program: %v", err)
+			}
 			ddebpf.RemoveIgnoredProgramID(data.id)
 			delete(c.cache, id)
 		}
