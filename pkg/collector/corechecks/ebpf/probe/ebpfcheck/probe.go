@@ -925,6 +925,9 @@ func isForEachElemHelperAvailable() bool {
 
 func hashMapNumberOfEntriesWithHelper(mp *ebpf.Map, mapid ebpf.MapID) (int64, error) {
 	prog, err := mphCache.newCachedProgramForMap(mp, mapid)
+	if err != nil {
+		return 0, err
+	}
 
 	res, _, err := prog.Test(make([]byte, 32))
 	if err != nil {
