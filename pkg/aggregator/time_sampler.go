@@ -8,9 +8,9 @@ package aggregator
 import (
 	"fmt"
 	"io"
+	"maps"
 	"strconv"
 	"sync"
-	"maps"
 
 	"github.com/DataDog/datadog-agent/pkg/aggregator/ckey"
 	"github.com/DataDog/datadog-agent/pkg/aggregator/internal/tags"
