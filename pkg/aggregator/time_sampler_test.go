@@ -564,6 +564,8 @@ func flushSerie(sampler *TimeSampler, timestamp float64) (metrics.Series, metric
 	var series metrics.Series
 	var sketches metrics.SketchSeriesList
 
-	sampler.flush(timestamp, &series, &sketches)
+	blockChan := make(chan struct{})
+	sampler.flush(timestamp, &series, &sketches, blockChan)
+	<-blockChan
 	return series, sketches
 }
