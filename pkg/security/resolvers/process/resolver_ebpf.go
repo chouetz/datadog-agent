@@ -353,8 +353,8 @@ func (p *EBPFResolver) enrichEventFromProc(entry *model.ProcessCacheEntry, proc 
 
 	var id model.CGroupID
 	id, entry.Process.ContainerID = containerutils.GetCGroupContext(containerID, uint64(containerFlags))
-	entry.Process.CGroup.CGroupID = string(id)
-	entry.Process.CGroup.Flags = uint32(containerFlags)
+	entry.Process.CGroup.CGroupID = id
+	entry.Process.CGroup.CGroupFlags = uint64(containerFlags)
 
 	if entry.FileEvent.IsFileless() {
 		entry.FileEvent.Filesystem = model.TmpFS
@@ -839,8 +839,8 @@ func (p *EBPFResolver) resolveFromKernelMaps(pid, tid uint32, inode uint64) *mod
 	if entry.ContainerID == "" {
 		containerID, containerFlags, err := p.containerResolver.GetContainerContext(pid)
 		if err == nil {
-			entry.CGroup.Flags = uint32(containerFlags)
-			entry.CGroup.CGroupID = string(model.GetCgroupFromContainer(containerID, uint64(containerFlags)))
+			entry.CGroup.CGroupFlags = uint64(containerFlags)
+			entry.CGroup.CGroupID = model.GetCgroupFromContainer(containerID, uint64(containerFlags))
 		}
 	}
 
