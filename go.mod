@@ -58,7 +58,7 @@ require (
 	github.com/Microsoft/hcsshim v0.12.9
 	github.com/acobaugh/osrelease v0.1.0
 	github.com/alecthomas/participle v0.7.1 // indirect
-	github.com/alecthomas/units v0.0.0-20240626203959-61d1e3462e30
+	github.com/alecthomas/units v0.0.0-20240927000941-0f3dac36c52b
 	github.com/aquasecurity/trivy-db v0.0.0-20250227071930-8bd8a9b89e2d
 	github.com/avast/retry-go/v4 v4.6.0
 	github.com/aws/aws-lambda-go v1.37.0
