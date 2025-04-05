@@ -92,6 +92,8 @@ github.com/aws/aws-sdk-go-v2/service/sts v1.33.17 h1:PZV5W8yk4OtH1JAuhV2PXwwO9v5
 github.com/aws/aws-sdk-go-v2/service/sts v1.33.17/go.mod h1:cQnB8CUnxbMU82JvlqjKR2HBOm3fe9pWorWBza6MBJ4=
 github.com/aws/session-manager-plugin v0.0.0-20241119210807-82dc72922492 h1:Ihams/fjKo4iWwM313ng2gCJWoetsL7ZQkXhOTmVUq4=
 github.com/aws/session-manager-plugin v0.0.0-20241119210807-82dc72922492/go.mod h1:7n17tunRPUsniNBu5Ja9C7WwJWTdOzaLqr/H0Ns3uuI=
+github.com/aws/session-manager-plugin v0.0.0-20250205214155-b2b0bcd769d1 h1:yb9jaXBAhrDTf68kDDHjeqrkiZ1pGDzGu7l2vVCCllQ=
+github.com/aws/session-manager-plugin v0.0.0-20250205214155-b2b0bcd769d1/go.mod h1:7n17tunRPUsniNBu5Ja9C7WwJWTdOzaLqr/H0Ns3uuI=
 github.com/aws/smithy-go v1.22.3 h1:Z//5NuZCSW6R4PhQ93hShNbyBbn8BWCmCVCt+Q8Io5k=
 github.com/aws/smithy-go v1.22.3/go.mod h1:t1ufH5HMublsJYulve2RKmHDC15xu1f26kHCp/HgceI=
 github.com/aymanbagabas/go-osc52/v2 v2.0.1 h1:HwpRHbFMcZLEVr42D4p7XBqjyuxQH5SMiErDT4WkJ2k=

@@ -246,7 +246,7 @@ require (
 	github.com/DataDog/datadog-go/v5 v5.6.0
 	github.com/aws/aws-sdk-go v1.55.6
 	github.com/aws/aws-sdk-go-v2/service/s3 v1.78.1
-	github.com/aws/session-manager-plugin v0.0.0-20241119210807-82dc72922492
+	github.com/aws/session-manager-plugin v0.0.0-20250205214155-b2b0bcd769d1
 	github.com/digitalocean/go-libvirt v0.0.0-20240812180835-9c6c0a310c6c
 	github.com/hairyhenderson/go-codeowners v0.7.0
 )
