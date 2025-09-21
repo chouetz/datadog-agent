@@ -1,6 +1,6 @@
 module datadog-lambda-extension/recorder-extension
 
-go 1.18
+go 1.24.6
 
 replace (
 	github.com/DataDog/datadog-agent/pkg/obfuscate => github.com/DataDog/datadog-agent/pkg/obfuscate v0.0.0-20211201172000-1fd9a353e8e4
@@ -34,14 +34,15 @@ replace (
 )
 
 require (
-	github.com/DataDog/agent-payload/v5 v5.0.19
-	github.com/DataDog/datadog-agent v0.0.0-20211213161047-f82981e22ca1
-	github.com/DataDog/zstd v1.5.5
-
+	github.com/DataDog/agent-payload/v5 v5.0.165
+	github.com/DataDog/datadog-agent v0.0.0-20250920173823-4c3ba894409b
+	github.com/DataDog/datadog-agent/pkg/trace v0.71.0-rc.1
+	github.com/DataDog/zstd v1.5.6
 )
 
 require (
 	github.com/gogo/protobuf v1.3.2 // indirect
-	github.com/philhofer/fwd v1.1.1 // indirect
-	github.com/tinylib/msgp v1.1.6 // indirect
+	github.com/philhofer/fwd v1.2.0 // indirect
+	github.com/tinylib/msgp v1.4.0 // indirect
+	google.golang.org/protobuf v1.36.8 // indirect
 )
