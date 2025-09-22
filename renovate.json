@@ -1,10 +1,104 @@
 {
     "$schema": "https://docs.renovatebot.com/renovate-schema.json",
-    "enabledManagers": ["custom.regex", "pre-commit"],
+    "extends": ["config:recommended"],
     "labels": ["dependencies", "changelog/no-changelog", "qa/no-code-change"],
     "stopUpdatingLabel": "stop-updating",
     "platformCommit": "enabled",
+    "separateMinorPatch": false,
     "packageRules": [
+        {
+        "matchManagers": ["gomod"],
+        "matchPaths": ["**/go.mod"],
+        "excludePaths": ["internal/tools/go.mod"],
+        "labels": [
+          "dependencies",
+          "dependencies-go",
+          "changelog/no-changelog"
+        ],
+        "ignoreDeps": [
+          "k8s.io/*",
+          "github.com/cihub/seelog",
+          "github.com/containerd/cgroups",
+          "github.com/containerd/containerd",
+          "github.com/coreos/go-systemd",
+          "github.com/docker/*",
+          "github.com/florianl/go-conntrack",
+          "github.com/iovisor/gobpf",
+          "github.com/lxn/walk",
+          "github.com/mholt/archiver",
+          "github.com/prometheus/client_golang",
+          "github.com/spf13/cast",
+          "github.com/ugorji/go",
+          "github.com/DataDog/datadog-agent/*",
+          "golang.org/x/*",
+          "go.opentelemetry.io/collector/*",
+          "github.com/open-telemetry/opentelemetry-collector-contrib/*",
+          "github.com/mailru/easyjson",
+          "github.com/DataDog/test-infra-definitions",
+          "github.com/pulumi*",
+        ],
+        "groupName": "go-dependencies-main",
+        "groupSlug": "go-deps-main"
+      },
+      {
+        "matchManagers": ["gomod"],
+        "matchPaths": ["internal/tools/go.mod"],
+        "labels": [
+          "dependencies",
+          "dependencies-go",
+          "dependencies-go-tools",
+          "dev/tooling",
+          "changelog/no-changelog",
+          "qa/no-code-change"
+        ],
+        "schedule": ["before 6am on the first day of the month"],
+        "ignoreDeps": ["golang.org/x/*"],
+        "groupName": "go-tools",
+        "groupSlug": "go-tools"
+      },
+      {
+        "matchManagers": ["gomod"],
+        "matchPackagePatterns": ["^github\\.com/twmb/franz-go"],
+        "groupName": "franz-go"
+      },
+      {
+        "matchManagers": ["gomod"],
+        "matchPackagePatterns": ["^github\\.com/uptrace/bun"],
+        "groupName": "bun"
+      },
+      {
+        "matchManagers": ["gomod"],
+        "matchPackagePatterns": ["^github\\.com/aws/aws-sdk-go-v2"],
+        "groupName": "aws-sdk-go-v2"
+      },
+      {
+        "matchManagers": ["docker"],
+        "matchPaths": ["test/fakeintake/**"],
+        "labels": [
+          "dependencies",
+          "changelog/no-changelog",
+          "qa/no-code-change",
+          "dev/testing"
+        ]
+      },
+      {
+        "matchManagers": ["github-actions"],
+        "labels": [
+          "dependencies",
+          "dependencies-github-actions",
+          "changelog/no-changelog",
+          "qa/no-code-change",
+          "dev/tooling"
+        ]
+      },
+      {
+        "matchManagers": ["maven"],
+        "matchPaths": ["Dockerfiles/agent/bouncycastle-fips/**"],
+        "labels": [
+          "dependencies",
+          "changelog/no-changelog"
+        ]
+      },
       {
         "matchDepNames": ["integrations-core"],
         "changelogUrl": "https://github.com/DataDog/integrations-core/compare/{{currentDigest}}..{{newDigest}}",
