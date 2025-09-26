@@ -1,48 +1,40 @@
-{
-    "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+  {
     "extends": ["config:recommended"],
-    "labels": ["dependencies", "changelog/no-changelog", "qa/no-code-change"],
-    "stopUpdatingLabel": "stop-updating",
-    "platformCommit": "enabled",
+    "schedule": ["before 6am on monday"],
+    "labels": ["dependencies"],
     "separateMinorPatch": false,
     "packageRules": [
-        {
+      {
         "matchManagers": ["gomod"],
-        "matchPaths": ["**/go.mod"],
-        "excludePaths": ["internal/tools/go.mod"],
+        "matchFileNames": [
+          "go.mod",
+          "pkg/trace/go.mod",
+          "pkg/gohai/go.mod",
+          "pkg/obfuscate/go.mod",
+          "pkg/security/secl/go.mod",
+          "pkg/networkdevice/profile/go.mod"
+        ],
         "labels": [
           "dependencies",
           "dependencies-go",
           "changelog/no-changelog"
         ],
-        "ignoreDeps": [
-          "k8s.io/*",
-          "github.com/cihub/seelog",
-          "github.com/containerd/cgroups",
-          "github.com/containerd/containerd",
-          "github.com/coreos/go-systemd",
-          "github.com/docker/*",
-          "github.com/florianl/go-conntrack",
-          "github.com/iovisor/gobpf",
-          "github.com/lxn/walk",
-          "github.com/mholt/archiver",
-          "github.com/prometheus/client_golang",
-          "github.com/spf13/cast",
-          "github.com/ugorji/go",
-          "github.com/DataDog/datadog-agent/*",
-          "golang.org/x/*",
-          "go.opentelemetry.io/collector/*",
-          "github.com/open-telemetry/opentelemetry-collector-contrib/*",
-          "github.com/mailru/easyjson",
-          "github.com/DataDog/test-infra-definitions",
-          "github.com/pulumi*",
+        "matchPackageNames": [
+          "!/^k8s\\.io/",
+          "!/^github\\.com/cihub/seelog$/",
+          "!/^github\\.com/spf13/cast$/",
+          "!/^github\\.com/DataDog/datadog-agent/",
+          "!/^golang\\.org/x/",
+          "!/^go\\.opentelemetry\\.io/collector/",
+          "!/^github\\.com/open-telemetry/opentelemetry-collector-contrib/",
+          "!/^github\\.com/mailru/easyjson$/"
         ],
         "groupName": "go-dependencies-main",
         "groupSlug": "go-deps-main"
       },
       {
         "matchManagers": ["gomod"],
-        "matchPaths": ["internal/tools/go.mod"],
+        "matchFileNames": ["internal/tools/go.mod"],
         "labels": [
           "dependencies",
           "dependencies-go",
@@ -52,157 +44,47 @@
           "qa/no-code-change"
         ],
         "schedule": ["before 6am on the first day of the month"],
-        "ignoreDeps": ["golang.org/x/*"],
+        "matchPackageNames": ["!/^golang\\.org/x/"],
         "groupName": "go-tools",
         "groupSlug": "go-tools"
       },
       {
         "matchManagers": ["gomod"],
-        "matchPackagePatterns": ["^github\\.com/twmb/franz-go"],
+        "matchFileNames": ["test/new-e2e/go.mod", "test/fakeintake/go.mod"],
+        "labels": [
+          "dependencies",
+          "dependencies-go",
+          "changelog/no-changelog",
+          "qa/no-code-change",
+          "dev/testing"
+        ],
+        "matchPackageNames": [
+          "!/^github\\.com/DataDog/test-infra-definitions$/",
+          "!/^github\\.com/pulumi/",
+          "!/^golang\\.org/x/"
+        ],
+        "groupName": "go-test-dependencies",
+        "groupSlug": "go-test-deps"
+      },
+      {
+        "matchManagers": ["gomod"],
+        "matchPackageNames": ["/^github\\.com/twmb/franz-go/"],
         "groupName": "franz-go"
       },
       {
         "matchManagers": ["gomod"],
-        "matchPackagePatterns": ["^github\\.com/uptrace/bun"],
+        "matchPackageNames": ["/^github\\.com/uptrace/bun/"],
         "groupName": "bun"
       },
       {
         "matchManagers": ["gomod"],
-        "matchPackagePatterns": ["^github\\.com/aws/aws-sdk-go-v2"],
+        "matchPackageNames": ["/^github\\.com/aws/aws-sdk-go-v2/"],
         "groupName": "aws-sdk-go-v2"
       },
       {
-        "matchManagers": ["docker"],
-        "matchPaths": ["test/fakeintake/**"],
-        "labels": [
-          "dependencies",
-          "changelog/no-changelog",
-          "qa/no-code-change",
-          "dev/testing"
-        ]
-      },
-      {
-        "matchManagers": ["github-actions"],
-        "labels": [
-          "dependencies",
-          "dependencies-github-actions",
-          "changelog/no-changelog",
-          "qa/no-code-change",
-          "dev/tooling"
-        ]
-      },
-      {
-        "matchManagers": ["maven"],
-        "matchPaths": ["Dockerfiles/agent/bouncycastle-fips/**"],
-        "labels": [
-          "dependencies",
-          "changelog/no-changelog"
-        ]
-      },
-      {
-        "matchDepNames": ["integrations-core"],
-        "changelogUrl": "https://github.com/DataDog/integrations-core/compare/{{currentDigest}}..{{newDigest}}",
-        "schedule": ["* 2-6 * * 1,3"]
-      },
-      {
-        "matchDepNames": ["omnibus-ruby"],
-        "changelogUrl": "https://github.com/DataDog/omnibus-ruby/compare/{{currentDigest}}..{{newDigest}}"
-      },
-      {
-        "matchDepNames": ["linux-images"],
-        "changelogUrl": "https://github.com/DataDog/datadog-agent-buildimages/commits/main",
-        "schedule": ["* 2-6 * * 1-5"]
-      },
-      {
-        "matchDepNames": ["windows-images"],
-        "changelogUrl": "https://github.com/DataDog/datadog-agent-buildimages/commits/main",
-        "schedule": ["* 2-6 2 * *"]
-      },
-      {
-        "matchDepNames": ["DataDog/datadog-agent-dev"],
-        "changelogUrl": "https://github.com/DataDog/datadog-agent-dev/releases/tag/v{{newValue}}",
-        "schedule": ["* 1-4 5 6,12 *"]
+        "matchManagers": ["gomod"],
+        "matchPackageNames": ["/^k8s\\.io/"],
+        "groupName": "k8s-io"
       }
-    ],
-    "pre-commit": {
-      "enabled": true,
-      "managerFilePatterns": [".pre-commit-config.yaml"]
-    },
-    "customManagers" : [
-      {
-        "customType": "regex",
-        "managerFilePatterns": [".gitlab-ci.yml"],
-        "matchStrings": [
-          "  CI_IMAGE_[^W][^:]*: (?<currentValue>v.*)"
-        ],
-        "depNameTemplate": "linux-images",
-        "versioningTemplate": "loose",
-        "datasourceTemplate": "custom.linux-images"
-      },
-      {
-        "customType": "regex",
-        "managerFilePatterns": [".gitlab-ci.yml"],
-        "matchStrings": [
-          "  CI_IMAGE_WIN_[^:]*: (?<currentValue>v.*)"
-        ],
-        "depNameTemplate": "windows-images",
-        "versioningTemplate": "regex:^(ltsc2022-)?v(?<major>\\d+)-.*$",
-        "datasourceTemplate": "custom.windows-images",
-        "extractVersionTemplate": "^(ltsc2022-)?(?<version>.*)$"
-      },
-      {
-        "customType": "regex",
-        "managerFilePatterns": [".protoc-version"],
-        "matchStrings": [
-          "(?<currentValue>[0-9]+.[0-9]+)"
-        ],
-        "depNameTemplate": "protocolbuffers/protobuf",
-        "datasourceTemplate": "github-releases"
-      },
-      {
-        "customType": "regex",
-        "managerFilePatterns": [".dda/version"],
-        "matchStrings": [
-          "(?<currentValue>[0-9]+.[0-9]+.[0-9]+)"
-        ],
-        "depNameTemplate": "DataDog/datadog-agent-dev",
-        "datasourceTemplate": "github-releases"
-      },
-      {
-        "customType": "regex",
-        "managerFilePatterns": ["release.json"],
-        "matchStrings": [
-          "[ ]+\"OMNIBUS_RUBY_VERSION\": \"(?<currentDigest>[a-z0-9]+)\""
-        ],
-        "currentValueTemplate": "datadog-5.5.0",
-        "depNameTemplate": "omnibus-ruby",
-        "packageNameTemplate": "https://github.com/DataDog/omnibus-ruby",
-        "datasourceTemplate": "git-refs"
-      },
-      {
-        "customType": "regex",
-        "managerFilePatterns": ["release.json"],
-        "matchStrings": [
-          "[ ]+\"INTEGRATIONS_CORE_VERSION\": \"(?<currentDigest>[a-z0-9]+)\""
-        ],
-        "currentValueTemplate": "master",
-        "depNameTemplate": "integrations-core",
-        "packageNameTemplate": "https://github.com/DataDog/integrations-core",
-        "datasourceTemplate": "git-refs"
-      }
-    ],
-    "customDatasources": {
-      "linux-images": {
-        "defaultRegistryUrlTemplate": "https://hub.docker.com/v2/namespaces/datadog/repositories/agent-buildimages-linux/tags",
-        "transformTemplates": [
-          "{\"releases\": $map(results, function($v) { {\"version\": $v.name, \"releaseTimestamp\": $v.last_updated } }) }"
-        ]
-      },
-      "windows-images": {
-        "defaultRegistryUrlTemplate": "https://hub.docker.com/v2/namespaces/datadog/repositories/agent-buildimages-windows_x64/tags",
-        "transformTemplates": [
-          "{\"releases\": $map(results, function($v) { {\"version\": $v.name, \"releaseTimestamp\": $v.last_updated } }) }"
-        ]
-      }
-    }
+    ]
   }
