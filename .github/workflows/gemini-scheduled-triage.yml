@@ -34,6 +34,8 @@ jobs:
       id-token: 'write'
       issues: 'read'
       pull-requests: 'read'
+    environment:
+      name: main
     outputs:
       available_labels: '${{ steps.get_labels.outputs.available_labels }}'
       triaged_issues: '${{ env.TRIAGED_ISSUES }}'
