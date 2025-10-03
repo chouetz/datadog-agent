@@ -3,9 +3,18 @@ name: '📋 Gemini Scheduled Issue Triage'
 on:
   schedule:
     - cron: '0 * * * *' # Runs every hour
-  issues:
-    types:
-      - created
+  pull_request:
+    branches:
+      - 'main'
+      - 'release/**/*'
+    paths:
+      - '.github/workflows/gemini-scheduled-triage.yml'
+  push:
+    branches:
+      - 'main'
+      - 'release/**/*'
+    paths:
+      - '.github/workflows/gemini-scheduled-triage.yml'
   workflow_dispatch:
 
 concurrency:
