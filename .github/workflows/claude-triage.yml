@@ -1,0 +1,255 @@
+---
+name: Triage issues with Claude code
+on:
+  issues:
+    types: [opened, reopened]
+  pull_request:
+    branches:
+      - 'main'
+    paths:
+      - '.github/workflows/claude-triage.yml'
+
+permissions:
+    issues: write
+    contents: read
+
+jobs:
+  triage:
+      runs-on: ubuntu-latest
+
+      steps:
+        - name: Checkout repository
+          uses: actions/checkout@v4
+
+        - name: Intelligent Issue Triage
+          uses: anthropics/claude-code-action@v1
+          with:
+            anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
+            github_token: ${{ secrets.GITHUB_TOKEN }}
+            model: claude-3-5-sonnet-20241022
+            prompt: |
+              # Datadog Agent - Intelligent Issue Triage System
+
+              ## Context
+              You are an expert triage system for the Datadog Agent repository. Your job is to analyze this GitHub issue and determine which team should handle it. You have full access to the Datadog Agent codebase and can use all available tools to analyze issues.
+
+                ## Current Issue
+              **Title:** ${{ github.event.issue.title }}
+              **Number:** #${{ github.event.issue.number }}
+              **Author:** @${{ github.event.issue.user.login }}
+              **Body:**
+              ```
+              ${{ github.event.issue.body }}
+              ```
+
+              ## Analysis Protocol
+              1. **Extract Technical Keywords**: Parse issue for component names, error messages, config keys, file paths
+              2. **Codebase Search**: Use grep/find to locate relevant files and directories
+              3. **Ownership Analysis**: Check CODEOWNERS for team assignments
+              4. **Pattern Matching**: Look for similar historical issues and their team assignments
+              5. **Team Assignment**: Apply the most appropriate team label
+              6. **Documentation**: Comment on the issue explaining the triage decision
+
+              ## Available Teams (from CODEOWNERS analysis)
+              Use these exact team labels:
+              - `team/container-platform` - Container orchestration, tagger, workloadmeta
+              - `team/container-integrations` - Docker, containerd, Kubernetes checks
+              - `team/agent-apm` - Trace agent, APM functionality
+              - `team/agent-configuration` - Config management, CLI, flare
+              - `team/agent-security` - CWS, security monitoring
+              - `team/ebpf-platform` - System probe, eBPF components
+              - `team/windows-products` - Windows-specific functionality
+              - `team/agent-log-pipelines` - Log collection and processing
+              - `team/agent-metric-pipelines` - Metrics, DogStatsD, serialization
+              - `team/ndm-core` - Network device monitoring, SNMP
+              - `team/opentelemetry-agent` - OpenTelemetry integration
+              - `team/fleet` - Agent installation, updater
+              - And others as defined in CODEOWNERS...
+
+              ## Action Items
+              1. Perform thorough analysis using available tools
+              2. Select exactly one team label
+              3. Generate explanatory comment of the choice you did
+              4. If uncertain, apply `team/agent-devx` and request manual review
+
+              ## Output Format
+              You must set THREE GitHub Action outputs by creating a file at $GITHUB_OUTPUT with these entries:
+
+              ```
+              team=TEAM_NAME_ONLY
+              confidence=HIGH|MEDIUM|LOW
+              explanation=Brief explanation of why this team was chosen
+              ```
+
+              **IMPORTANT:**
+              - For `team=`, provide ONLY the team name without "team/" prefix (e.g., "container-platform", not "team/container-platform")
+              - Use HIGH confidence if you're very sure, MEDIUM if reasonably sure, LOW if uncertain
+              - Keep explanation under 100 characters
+
+              ## Example Output
+              If the issue is about Docker container environment variables:
+              ```
+              team=container-platform
+              confidence=HIGH
+              explanation=Issue involves DD_CONTAINER_ENV_AS_TAGS and Docker Swarm container tagging functionality
+              ```
+
+              Start your analysis now and ensure you create the GitHub Action outputs.
+
+        - name: Validate Claude Output
+          run: |
+            echo "Team determined: ${{ steps.claude-analysis.outputs.team }}"
+            echo "Confidence: ${{ steps.claude-analysis.outputs.confidence }}"
+            echo "Explanation: ${{ steps.claude-analysis.outputs.explanation }}"
+
+            # Validate that we got a team output
+            if [ -z "${{ steps.claude-analysis.outputs.team }}" ]; then
+              echo "ERROR: No team was determined by Claude"
+              exit 1
+            fi
+
+
+        - name: Update Triage Status
+          if: success()
+          uses: actions/github-script@v7
+          with:
+            script: |
+              // Add a reaction to show the bot processed the issue
+              github.rest.reactions.createForIssue({
+                issue_number: ${{ github.event.issue.number }},
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                content: 'robot'
+              });
+
+  apply-label-and-notify:
+      name: Apply Label and Send Slack Notification
+      runs-on: ubuntu-latest
+      needs: triage
+      if: ${{ needs.triage.outputs.team != '' }}
+      steps:
+        - name: Checkout repository
+          uses: actions/checkout@v4
+
+        - name: Install dependencies
+          run: npm install @slack/web-api js-yaml
+
+        - name: Apply Team Label and Send Slack Message
+          uses: actions/github-script@v7
+          env:
+            SLACK_DATADOG_AGENT_BOT_TOKEN: ${{ secrets.SLACK_DATADOG_AGENT_BOT_TOKEN }}
+            TEAM_LABEL: ${{ needs.determine-team.outputs.team }}
+            CONFIDENCE: ${{ needs.determine-team.outputs.confidence }}
+            EXPLANATION: ${{ needs.determine-team.outputs.explanation }}
+          with:
+            script: |
+              const fs = require('fs');
+              const path = require('path');
+              const yaml = require('js-yaml');
+              const { WebClient } = require('@slack/web-api');
+
+              // Load Slack mapping (replicating tasks/libs/pipeline/notifications.py logic)
+              function loadSlackMapping() {
+                try {
+                  const mappingPath = path.join(process.cwd(), 'tasks/libs/pipeline/github_slack_map.yaml');
+                  const fileContent = fs.readFileSync(mappingPath, 'utf8');
+                  const mapping = yaml.load(fileContent);
+
+                  // Convert to lowercase keys and handle DEFAULT_SLACK_CHANNEL
+                  const result = {};
+                  const defaultChannel = '#agent-devx-ops';
+
+                  for (const [key, value] of Object.entries(mapping)) {
+                    const cleanKey = key.toLowerCase().replace('@datadog/', '');
+                    const cleanValue = value === 'DEFAULT_SLACK_CHANNEL' ? defaultChannel : value;
+                    result[cleanKey] = cleanValue;
+                  }
+
+                  return { mapping: result, defaultChannel };
+                } catch (error) {
+                  console.error('Error loading Slack mapping:', error);
+                  return { mapping: {}, defaultChannel: '#agent-devx-ops' };
+                }
+              }
+
+              // Get issue details
+              const issue = context.payload.issue;
+              const teamName = process.env.TEAM_LABEL;
+              const confidence = process.env.CONFIDENCE;
+              const explanation = process.env.EXPLANATION;
+
+              console.log(`Processing triage for issue #${issue.number}`);
+              console.log(`Team: ${teamName}, Confidence: ${confidence}`);
+              console.log(`Explanation: ${explanation}`);
+
+              // Step 1: Apply the team label using octokit.rest.issues.addLabels
+              try {
+                await github.rest.issues.addLabels({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  issue_number: issue.number,
+                  labels: [`team/${teamName}`]
+                });
+                console.log(`✅ Successfully applied label: team/${teamName}`);
+              } catch (error) {
+                console.error(`❌ Failed to apply label: ${error}`);
+                throw error;
+              }
+
+              // Step 2: Send Slack notification (replicating assign_owner logic from tasks/issue.py)
+              try {
+                const { mapping: slackMapping, defaultChannel } = loadSlackMapping();
+                const slack = new WebClient(process.env.SLACK_DATADOG_AGENT_BOT_TOKEN);
+
+                // Find appropriate channel (same logic as tasks/issue.py line 36)
+                const channel = slackMapping[teamName.toLowerCase()] || defaultChannel;
+
+                // Create confidence emoji
+                const confidenceEmojis = {
+                  'HIGH': ':white_check_mark:',
+                  'MEDIUM': ':warning:',
+                  'LOW': ':question:'
+                };
+                const confidenceEmoji = confidenceEmojis[confidence] || ':robot_face:';
+
+                // Create message (similar format to tasks/issue.py lines 37-43)
+                let message = `:githubstatus_partial_outage: *New Community Issue*
+              ${issue.title} <${issue.html_url}|${context.repo.repo}#${issue.number}>
+
+              ${confidenceEmoji} **Auto-assigned to team/${teamName}** (Confidence: ${confidence})
+              **Analysis:** ${explanation}
+              `;
+
+                // Handle default channel case (similar to tasks/issue.py lines 38-43)
+                if (channel === defaultChannel && !slackMapping[teamName.toLowerCase()]) {
+                  message += "\nThe CI bot couldn't find a specific channel for this team.\nPlease assign manually if needed.";
+                } else {
+                  message += "\nYour team was assigned automatically using AI analysis.\nPlease redirect if the assignment is incorrect.";
+                }
+
+                const response = await slack.chat.postMessage({
+                  channel: channel,
+                  text: message
+                });
+
+                console.log(`✅ Slack message sent to ${channel} (message ts: ${response.ts})`);
+
+              } catch (error) {
+                console.error(`❌ Failed to send Slack notification: ${error}`);
+
+                // Try to send error notification to default channel
+                try {
+                  const slack = new WebClient(process.env.SLACK_DATADOG_AGENT_BOT_TOKEN);
+                  await slack.chat.postMessage({
+                    channel: '#agent-devx-ops',
+                    text: `⚠️ Failed to send triage notification for issue ${issue.html_url}. Team: ${teamName}. Error: ${error.message}`
+                  });
+                } catch (fallbackError) {
+                  console.error('Failed to send fallback notification:', fallbackError);
+                }
+
+                // Don't fail the job for Slack errors - label was already applied
+                console.log('Label was applied successfully, continuing despite Slack notification failure...');
+              }
+
+              console.log('✅ Triage process completed');
