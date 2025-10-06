@@ -16,7 +16,8 @@ permissions:
 jobs:
   triage:
       runs-on: ubuntu-latest
-
+      environment:
+        name: main
       steps:
         - name: Checkout repository
           uses: actions/checkout@v4
@@ -125,6 +126,8 @@ jobs:
   apply-label-and-notify:
       name: Apply Label and Send Slack Notification
       runs-on: ubuntu-latest
+      environment:
+        name: main
       needs: triage
       if: ${{ needs.triage.outputs.team != '' }}
       steps:
