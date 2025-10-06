@@ -3,6 +3,8 @@ name: '📋 Gemini Scheduled Issue Triage'
 on:
   schedule:
     - cron: '0 * * * *' # Runs every hour
+  issues:
+    types: [opened, reopened]
   pull_request:
     branches:
       - 'main'
@@ -15,7 +17,6 @@ on:
       - 'release/**/*'
     paths:
       - '.github/workflows/gemini-scheduled-triage.yml'
-  workflow_dispatch:
 
 concurrency:
   group: '${{ github.workflow }}'
@@ -197,9 +198,11 @@ jobs:
 
             2. Compare the issue's intent against the semantic map of your labels.
 
-            3. Select the set of one or more labels that most accurately describe the issue.
+            3. If the source code of the repository is available on your context, use it and the associated CODEOWNERS file to have a better understanding of the issue and improve how you will associate it with a team label.
 
-            4. If no available labels are a clear and confident match for an issue, exclude that issue from the final output.
+            4. Select the set of one or more labels that most accurately describe the issue.
+
+            5. If no available labels are a clear and confident match for an issue, exclude that issue from the final output.
 
             ## Step 5: Construct and Write Output
 
