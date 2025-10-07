@@ -99,9 +99,9 @@ jobs:
           id: assign
           run: |
             # Extract the decisions from Claude's response
-            TEAM=$(echo "${{ steps.claude.outputs.response }}" | grep "TEAM_DECISION:" | sed 's/TEAM_DECISION: //')
-            CONFIDENCE=$(echo "${{ steps.claude.outputs.response }}" | grep "CONFIDENCE_DECISION:" | sed 's/CONFIDENCE_DECISION: //')
-            EXPLANATION=$(echo "${{ steps.claude.outputs.response }}" | grep "EXPLANATION_DECISION:" | sed 's/EXPLANATION_DECISION: //')
+            TEAM=$(echo "$GITHUB_STEP_SUMMARY" | grep "TEAM_DECISION:" | sed 's/TEAM_DECISION: //')
+            CONFIDENCE=$(echo "$GITHUB_STEP_SUMMARY" | grep "CONFIDENCE_DECISION:" | sed 's/CONFIDENCE_DECISION: //')
+            EXPLANATION=$(echo "$GITHUB_STEP_SUMMARY" | grep "EXPLANATION_DECISION:" | sed 's/EXPLANATION_DECISION: //')
 
             echo "team=${TEAM}" >> $GITHUB_OUTPUT
             echo "confidence=${CONFIDENCE}" >> $GITHUB_OUTPUT
