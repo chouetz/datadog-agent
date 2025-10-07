@@ -18,11 +18,16 @@ jobs:
       runs-on: ubuntu-latest
       environment:
         name: main
+      outputs:
+        team: ${{ steps.assign.outputs.team }}
+        confidence: ${{ steps.assign.outputs.confidence }}
+        explanation: ${{ steps.assign.outputs.explanation }}
       steps:
         - name: Checkout repository
           uses: actions/checkout@v4
 
         - name: Intelligent Issue Triage
+          id: assign
           uses: anthropics/claude-code-action@v1
           with:
             anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
@@ -72,9 +77,13 @@ jobs:
               2. Select exactly one team label
               3. Generate explanatory comment of the choice you did
               4. If uncertain, apply `team/agent-devx` and request manual review
+              5. Construct and write the output as described in the **Output Format** section below.
 
               ## Output Format
-              You must set THREE GitHub Action outputs by creating a file at $GITHUB_OUTPUT with these entries:
+              The output must be passed as a job output in the GITHUB_OUTPUT. 
+              Use the shell command to write `echo "team=..." >> "$GITHUB_OUTPUT"`. 
+              Replace ... by the value retrieved earlier. 
+              You **MUST** execute this for each of the required output, as in the below example
 
               ```
               team=TEAM_NAME_ONLY
