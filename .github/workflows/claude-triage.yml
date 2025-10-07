@@ -27,7 +27,7 @@ jobs:
           uses: actions/checkout@v4
 
         - name: Intelligent Issue Triage
-          id: assign
+          id: claude
           uses: anthropics/claude-code-action@v1
           with:
             anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
@@ -80,40 +80,46 @@ jobs:
               5. Construct and write the output as described in the **Output Format** section below.
 
               ## Output Format
-              The output must be passed as a job output in the GITHUB_OUTPUT. 
-              Use the shell command to write `echo "team=..." >> "$GITHUB_OUTPUT"`. 
-              Replace ... by the value retrieved earlier. 
-              You **MUST** execute this for each of the required output, as in the below example
+              At the end of your analysis, provide a summary in this exact format:
 
-              ```
-              team=TEAM_NAME_ONLY
-              confidence=HIGH|MEDIUM|LOW
-              explanation=Brief explanation of why this team was chosen
-              ```
+              TEAM_DECISION: team_name_only
+              CONFIDENCE_DECISION: HIGH|MEDIUM|LOW
+              EXPLANATION_DECISION: Brief explanation of why this team was chosen
+
+              You **MUST** make these three lines appear at the very end of your response.
 
               **IMPORTANT:**
               - For `team=`, provide ONLY the team name without "team/" prefix (e.g., "container-platform", not "team/container-platform")
               - Use HIGH confidence if you're very sure, MEDIUM if reasonably sure, LOW if uncertain
               - Keep explanation under 100 characters
 
-              ## Example Output
-              If the issue is about Docker container environment variables:
-              ```
-              team=container-platform
-              confidence=HIGH
-              explanation=Issue involves DD_CONTAINER_ENV_AS_TAGS and Docker Swarm container tagging functionality
-              ```
-
               Start your analysis now and ensure you create the GitHub Action outputs.
+              
+        - name: Extract Claude Outputs
+          id: assign
+          run: |
+            # Extract the decisions from Claude's response
+            TEAM=$(echo "${{ steps.claude.outputs.response }}" | grep "TEAM_DECISION:" | sed 's/TEAM_DECISION: //')
+            CONFIDENCE=$(echo "${{ steps.claude.outputs.response }}" | grep "CONFIDENCE_DECISION:" | sed 's/CONFIDENCE_DECISION: //')
+            EXPLANATION=$(echo "${{ steps.claude.outputs.response }}" | grep "EXPLANATION_DECISION:" | sed 's/EXPLANATION_DECISION: //')
 
+            echo "team=${TEAM}" >> $GITHUB_OUTPUT
+            echo "confidence=${CONFIDENCE}" >> $GITHUB_OUTPUT
+            echo "explanation=${EXPLANATION}" >> $GITHUB_OUTPUT
+
+            echo "Extracted outputs:"
+            echo "Team: ${TEAM}"
+            echo "Confidence: ${CONFIDENCE}"
+            echo "Explanation: ${EXPLANATION}"
+            
         - name: Validate Claude Output
           run: |
-            echo "Team determined: ${{ steps.claude-analysis.outputs.team }}"
-            echo "Confidence: ${{ steps.claude-analysis.outputs.confidence }}"
-            echo "Explanation: ${{ steps.claude-analysis.outputs.explanation }}"
+            echo "Team determined: ${{ steps.assign.outputs.team }}"
+            echo "Confidence: ${{ steps.assign.outputs.confidence }}"
+            echo "Explanation: ${{ steps.assign.outputs.explanation }}"
 
             # Validate that we got a team output
-            if [ -z "${{ steps.claude-analysis.outputs.team }}" ]; then
+            if [ -z "${{ steps.assign.outputs.team }}" ]; then
               echo "ERROR: No team was determined by Claude"
               exit 1
             fi
