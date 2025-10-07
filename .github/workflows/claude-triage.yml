@@ -103,7 +103,7 @@ jobs:
         - name: Extract label from file
           id: extract-label
           run: |
-            if [ -f claude-label.txt ]; then
+            if [ -f claude.txt ]; then
               TEAM=$(grep TEAM claude.txt | cut -d ':' -f2)
               echo "team=$TEAM" >> $GITHUB_OUTPUT
               CONFIDENCE=$(grep CONFIDENCE claude.txt | cut -d ':' -f2)
