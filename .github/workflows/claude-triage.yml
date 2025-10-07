@@ -168,7 +168,7 @@ jobs:
               // Send Slack notification (replicating assign_owner logic from tasks/issue.py)
               try {
                 const { mapping: slackMapping, defaultChannel } = loadSlackMapping();
-                const slack = new WebClient(process.env.SLACK_DATADOG_AGENT_BOT_TOKEN);
+                const slack = new WebClient(process.env.SLACK_TOKEN);
 
                 // Find appropriate channel (same logic as tasks/issue.py line 36)
                 //const channel = slackMapping[teamName.toLowerCase()] || defaultChannel;
