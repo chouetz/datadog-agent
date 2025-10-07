@@ -18,10 +18,6 @@ jobs:
       runs-on: ubuntu-latest
       environment:
         name: main
-      outputs:
-        team: ${{ steps.claude.outputs.team }}
-        confidence: ${{ steps.claude.outputs.confidence }}
-        explanation: ${{ steps.claude.outputs.explanation }}
       steps:
         - name: Checkout repository
           uses: actions/checkout@v4
@@ -32,7 +28,7 @@ jobs:
           with:
             anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
             github_token: ${{ secrets.GITHUB_TOKEN }}
-            claude_args : --allowedTools "Read,Write,Bash(cat:*),Bash(echo:*),Bash(echo:*),Bash(tee:*),Bash(test:*),Bash(EOF:*)"
+            claude_args : --allowedTools "Read,Write,Bash(cat:*),Bash(echo:*),Bash(gh issue edit:*),Bash(tee:*),Bash(test:*),Bash(EOF:*)"
             prompt: |
               # Datadog Agent - Intelligent Issue Triage System
 
@@ -77,27 +73,21 @@ jobs:
               2. Select exactly one team label
               3. Generate explanatory comment of the choice you did
               4. If uncertain, apply `team/agent-devx` and request manual review
-              5. Construct and write the output as described in the **Output Format** section below.
+              5. Apply the selected labels:
 
-              ## Output Format
-              The output must be passed as a job output in the GITHUB_OUTPUT. 
-              Use the shell command to write `echo "team=..." >> "$GITHUB_OUTPUT"`. 
-              Replace ... by the value retrieved earlier. 
-              You **MUST** execute this for each of the required output, as in the below example
-
-              ```
-              team=TEAM_NAME_ONLY
-              confidence=HIGH|MEDIUM|LOW
-              explanation=Brief explanation of why this team was chosen
-              ```
+              Use gh issue edit to apply your selected labels
+              DO NOT post any comments explaining your decision
+              DO NOT communicate directly with users
+              If no labels are clearly applicable, do not apply any labels
               
-              ## Example Output
-              If the issue is about Docker container environment variables:
-              ```
-              team=container-platform
-              confidence=HIGH
-              explanation=Issue involves DD_CONTAINER_ENV_AS_TAGS and Docker Swarm container tagging functionality
-              ```
+               ## Output Format
+              At the end of your analysis, provide a summary in this exact format:
+
+              TEAM_DECISION: team_name_only
+              CONFIDENCE_DECISION: HIGH|MEDIUM|LOW
+              EXPLANATION_DECISION: Brief explanation of why this team was chosen
+
+              Make sure these three lines appear at the very end of your response
 
               **IMPORTANT:**
               - For `team=`, provide ONLY the team name without "team/" prefix (e.g., "container-platform", not "team/container-platform")
@@ -106,34 +96,7 @@ jobs:
 
               Start your analysis now and ensure you create the GitHub Action outputs.
               
-            
-        - name: Validate Claude Output
-          run: |
-            echo "Team determined: ${{ steps.claude.outputs.team }}"
-            echo "Confidence: ${{ steps.claude.outputs.confidence }}"
-            echo "Explanation: ${{ steps.claude.outputs.explanation }}"
-
-            # Validate that we got a team output
-            if [ -z "${{ steps.claude.outputs.team }}" ]; then
-              echo "ERROR: No team was determined by Claude"
-              exit 1
-            fi
-
-
-        - name: Update Triage Status
-          if: success()
-          uses: actions/github-script@v7
-          with:
-            script: |
-              // Add a reaction to show the bot processed the issue
-              github.rest.reactions.createForIssue({
-                issue_number: ${{ github.event.issue.number }},
-                owner: context.repo.owner,
-                repo: context.repo.repo,
-                content: 'robot'
-              });
-
-  apply-label-and-notify:
+  slack-notify:
       name: Apply Label and Send Slack Notification
       runs-on: ubuntu-latest
       environment:
@@ -147,13 +110,30 @@ jobs:
         - name: Install dependencies
           run: npm install @slack/web-api js-yaml
 
-        - name: Apply Team Label and Send Slack Message
+        - name: Get the issue labels
+          id: label
+          uses: actions/github-script@v7
+          with:
+            script: |
+              const { data: labels } = await github.rest.issues.listLabelsOnIssue({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: context.issue.number
+              });
+
+              if (!labels || labels.length === 0) {
+                core.setFailed('There are no labels in this issue.')
+              }
+
+              const labelNames = labels.map(label => label.name).filter((word) => word.startsWith('team/'));
+              core.setOutput('assigned_label', labelNames[0]);
+              core.info(`Found ${labelNames.length} labels: ${labelNames.join(', ')}`);
+              return labelNames;
+        - name: Send Slack Message
           uses: actions/github-script@v7
           env:
             SLACK_DATADOG_AGENT_BOT_TOKEN: ${{ secrets.SLACK_DATADOG_AGENT_BOT_TOKEN }}
-            TEAM_LABEL: ${{ needs.determine-team.outputs.team }}
-            CONFIDENCE: ${{ needs.determine-team.outputs.confidence }}
-            EXPLANATION: ${{ needs.determine-team.outputs.explanation }}
+            LABEL: ${{ steps.label.output.assigned_label }}
           with:
             script: |
               const fs = require('fs');
@@ -187,29 +167,11 @@ jobs:
 
               // Get issue details
               const issue = context.payload.issue;
-              const teamName = process.env.TEAM_LABEL;
-              const confidence = process.env.CONFIDENCE;
-              const explanation = process.env.EXPLANATION;
+              const teamName = process.env.LABEL;
 
-              console.log(`Processing triage for issue #${issue.number}`);
-              console.log(`Team: ${teamName}, Confidence: ${confidence}`);
-              console.log(`Explanation: ${explanation}`);
+              console.log(`Processing triage for issue #${issue.number} Team: ${teamName}`);
 
-              // Step 1: Apply the team label using octokit.rest.issues.addLabels
-              try {
-                await github.rest.issues.addLabels({
-                  owner: context.repo.owner,
-                  repo: context.repo.repo,
-                  issue_number: issue.number,
-                  labels: [`team/${teamName}`]
-                });
-                console.log(`✅ Successfully applied label: team/${teamName}`);
-              } catch (error) {
-                console.error(`❌ Failed to apply label: ${error}`);
-                throw error;
-              }
-
-              // Step 2: Send Slack notification (replicating assign_owner logic from tasks/issue.py)
+              // Send Slack notification (replicating assign_owner logic from tasks/issue.py)
               try {
                 const { mapping: slackMapping, defaultChannel } = loadSlackMapping();
                 const slack = new WebClient(process.env.SLACK_DATADOG_AGENT_BOT_TOKEN);
@@ -217,20 +179,11 @@ jobs:
                 // Find appropriate channel (same logic as tasks/issue.py line 36)
                 const channel = slackMapping[teamName.toLowerCase()] || defaultChannel;
 
-                // Create confidence emoji
-                const confidenceEmojis = {
-                  'HIGH': ':white_check_mark:',
-                  'MEDIUM': ':warning:',
-                  'LOW': ':question:'
-                };
-                const confidenceEmoji = confidenceEmojis[confidence] || ':robot_face:';
-
                 // Create message (similar format to tasks/issue.py lines 37-43)
                 let message = `:githubstatus_partial_outage: *New Community Issue*
               ${issue.title} <${issue.html_url}|${context.repo.repo}#${issue.number}>
 
-              ${confidenceEmoji} **Auto-assigned to team/${teamName}** (Confidence: ${confidence})
-              **Analysis:** ${explanation}
+              **Auto-assigned to team/${teamName}**
               `;
 
                 // Handle default channel case (similar to tasks/issue.py lines 38-43)
