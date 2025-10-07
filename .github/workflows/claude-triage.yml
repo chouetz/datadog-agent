@@ -104,11 +104,11 @@ jobs:
           id: extract-label
           run: |
             if [ -f claude-label.txt ]; then
-              TEAM=$(grep TEAM claude-label.txt | cut -d ':' -f2)
+              TEAM=$(grep TEAM claude.txt | cut -d ':' -f2)
               echo "team=$TEAM" >> $GITHUB_OUTPUT
-              CONFIDENCE=$(grep CONFIDENCE claude-label.txt | cut -d ':' -f2)
+              CONFIDENCE=$(grep CONFIDENCE claude.txt | cut -d ':' -f2)
               echo "confidence=$CONFIDENCE" >> $GITHUB_OUTPUT
-              EXPLANATION=$(grep EXPLANATION claude-label.txt | cut -d ':' -f2)
+              EXPLANATION=$(grep EXPLANATION claude.txt | cut -d ':' -f2)
               echo "explanation=$EXPLANATION" >> $GITHUB_OUTPUT
             else
               echo "team=unknown" >> $GITHUB_OUTPUT
