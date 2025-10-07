@@ -115,7 +115,10 @@ jobs:
               echo "confidence=low" >> $GITHUB_OUTPUT
               echo "explanation=none" >> $GITHUB_OUTPUT
             fi
-            
+        
+        - name: Install dependencies
+          run: npm install @slack/web-api js-yaml
+          
         - name: Send Slack Message
           uses: actions/github-script@v7
           env:
