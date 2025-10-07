@@ -25,12 +25,10 @@ jobs:
         - name: Intelligent Issue Triage
           id: claude
           uses: anthropics/claude-code-action@v1
-          env:
-            SLACK_TOKEN: ${{ secrets.SLACK_DATADOG_AGENT_BOT_TOKEN}}
           with:
             anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
             github_token: ${{ secrets.GITHUB_TOKEN }}
-            claude_args : --allowedTools "Read,Write,Bash(cat:*),Bash(echo:*),Bash(gh issue edit:*),Bash(tee:*),Bash(test:*),Bash(curl:*)"
+            claude_args : --allowedTools "Read,Write,Bash(cat:*),Bash(echo:*),Bash(gh issue edit:*),Bash(tee:*),Bash(test:*),Bash(EOF:*)"
             prompt: |
               # Datadog Agent - Intelligent Issue Triage System
 
@@ -77,7 +75,7 @@ jobs:
               3. Generate explanatory comment of the choice you did
               4. If uncertain, apply `team/agent-devx` and request manual review
               5. Apply the selected labels using the **Apply label** section below
-              6. Post a message to the Slack channel #celian-tests using the **Post Slack** section below
+              6. Write TEAM_DECISION, CONFIDENCE_DECISION and EXPLANATION_DECISION in a local file claude.txt for the next step
                  
                **IMPORTANT:**
                - For `team=`, provide ONLY the team name without "team/" prefix (e.g., "container-platform", not "team/container-platform")
@@ -89,33 +87,139 @@ jobs:
                DO NOT post any comments explaining your decision
                DO NOT communicate directly with users
                If no labels are clearly applicable, do not apply any labels
-
-               ## Post Slack 
-               Use the SLACK_TOKEN from environ to post the message. The format of the message must be the following:
-               `:githubstatus_partial_outage: *New Community Issue*
-               ${ISSUE_TITLE} <${ISSUE_URL}|${REPOSITORY_NAME}#${ISSUE_NUMBER}>
-               ${CONFIDENCE_EMOJI} **Auto-assigned to team/${TEAM_DECISION}** (Confidence: ${CONFIDENCE_DECISION})
-               **Analysis:** ${EXPLANATION_DECISION}
-               `;
-               Replace names in ${} by their values:
-               - ISSUE_TITLE, ISSUE_URL, REPOSITORY_NAME, ISSUE_NUMBER are retrieved from the github context.
-               - TEAM_DECISION, CONFIDENCE_DECISION and EXPLANATION_DECISION are the ones you generated.
-               - For CONFIDENCE_EMOJI, use this mapping from the CONFIDENCE_DECISION value: {
-                  'HIGH': ':white_check_mark:',
-                  'MEDIUM': ':warning:',
-                  'LOW': ':question:'
-                } 
                
                ## Output Format
                At the end of your analysis, provide a summary in this exact format:
 
-               TEAM_DECISION: team_name_only
-               CONFIDENCE_DECISION: HIGH|MEDIUM|LOW
-               EXPLANATION_DECISION: Brief explanation of why this team was chosen
+               TEAM_DECISION:team_name_only
+               CONFIDENCE_DECISION:HIGH|MEDIUM|LOW
+               EXPLANATION_DECISION:Brief explanation of why this team was chosen
 
-               Make sure these three lines appear at the very end of your response
+               Make sure these three lines appear at the very end of your response.
+               Write this exact same content in the local claude.txt file.
 
                Start your analysis now and ensure you create the GitHub Action outputs.
+  
+        - name: Extract label from file
+          id: extract-label
+          run: |
+            if [ -f claude-label.txt ]; then
+              TEAM=$(grep TEAM claude-label.txt | cut -d ':' -f2)
+              echo "team=$TEAM" >> $GITHUB_OUTPUT
+              CONFIDENCE=$(grep CONFIDENCE claude-label.txt | cut -d ':' -f2)
+              echo "confidence=$CONFIDENCE" >> $GITHUB_OUTPUT
+              EXPLANATION=$(grep EXPLANATION claude-label.txt | cut -d ':' -f2)
+              echo "explanation=$EXPLANATION" >> $GITHUB_OUTPUT
+            else
+              echo "team=unknown" >> $GITHUB_OUTPUT
+              echo "confidence=low" >> $GITHUB_OUTPUT
+              echo "explanation=none" >> $GITHUB_OUTPUT
+            fi
+            
+        - name: Send Slack Message
+          uses: actions/github-script@v7
+          env:
+            SLACK_TOKEN: ${{ secrets.SLACK_DATADOG_AGENT_BOT_TOKEN }}
+            TEAM: ${{ steps.extract-label.outputs.team }}
+            CONFIDENCE: ${{ steps.extract-label.outputs.confidence }}
+            EXPLANATION: ${{ steps.extract-label.outputs.explanation }}
+          with:
+            script: |
+              const fs = require('fs');
+              const path = require('path');
+              const yaml = require('js-yaml');
+              const { WebClient } = require('@slack/web-api');
+
+              // Load Slack mapping (replicating tasks/libs/pipeline/notifications.py logic)
+              function loadSlackMapping() {
+                try {
+                  const mappingPath = path.join(process.cwd(), 'tasks/libs/pipeline/github_slack_map.yaml');
+                  const fileContent = fs.readFileSync(mappingPath, 'utf8');
+                  const mapping = yaml.load(fileContent);
+
+                  // Convert to lowercase keys and handle DEFAULT_SLACK_CHANNEL
+                  const result = {};
+                  const defaultChannel = '#agent-devx-ops';
+
+                  for (const [key, value] of Object.entries(mapping)) {
+                    const cleanKey = key.toLowerCase().replace('@datadog/', '');
+                    const cleanValue = value === 'DEFAULT_SLACK_CHANNEL' ? defaultChannel : value;
+                    result[cleanKey] = cleanValue;
+                  }
+
+                  return { mapping: result, defaultChannel };
+                } catch (error) {
+                  console.error('Error loading Slack mapping:', error);
+                  return { mapping: {}, defaultChannel: '#agent-devx-ops' };
+                }
+              }
+
+              // Get issue details
+              const issue = context.payload.issue;
+              const teamName = process.env.TEAM;
+              const confidence = process.env.CONFIDENCE;
+              const explanation = process.env.EXPLANATION;
+
+              console.log(`Processing triage for issue #${issue.number} Team: ${teamName}`);
+
+              // Send Slack notification (replicating assign_owner logic from tasks/issue.py)
+              try {
+                const { mapping: slackMapping, defaultChannel } = loadSlackMapping();
+                const slack = new WebClient(process.env.SLACK_DATADOG_AGENT_BOT_TOKEN);
+
+                // Find appropriate channel (same logic as tasks/issue.py line 36)
+                //const channel = slackMapping[teamName.toLowerCase()] || defaultChannel;
+                const channel = 'celian-tests';
+
+                // Create confidence emoji
+                const confidenceEmojis = {
+                  'HIGH': ':white_check_mark:',
+                  'MEDIUM': ':warning:',
+                  'LOW': ':question:'
+                };
+                const confidenceEmoji = confidenceEmojis[confidence] || ':robot_face:';
+
+                // Create message (similar format to tasks/issue.py lines 37-43)
+                let message = `:githubstatus_partial_outage: *New Community Issue*
+              ${issue.title} <${issue.html_url}|${context.repo.repo}#${issue.number}>
+
+              ${confidenceEmoji} **Auto-assigned to team/${teamName}** (Confidence: ${confidence})
+              **Analysis:** ${explanation}
+              `;
+
+                // Handle default channel case (similar to tasks/issue.py lines 38-43)
+                if (channel === defaultChannel && !slackMapping[teamName.toLowerCase()]) {
+                  message += "\nThe CI bot couldn't find a specific channel for this team.\nPlease assign manually if needed.";
+                } else {
+                  message += "\nYour team was assigned automatically using AI analysis.\nPlease redirect if the assignment is incorrect.";
+                }
+
+                const response = await slack.chat.postMessage({
+                  channel: channel,
+                  text: message
+                });
+
+                console.log(`✅ Slack message sent to ${channel} (message ts: ${response.ts})`);
+
+              } catch (error) {
+                console.error(`❌ Failed to send Slack notification: ${error}`);
+
+                // Try to send error notification to default channel
+                try {
+                  const slack = new WebClient(process.env.SLACK_DATADOG_AGENT_BOT_TOKEN);
+                  await slack.chat.postMessage({
+                    channel: '#agent-devx-ops',
+                    text: `⚠️ Failed to send triage notification for issue ${issue.html_url}. Team: ${teamName}. Error: ${error.message}`
+                  });
+                } catch (fallbackError) {
+                  console.error('Failed to send fallback notification:', fallbackError);
+                }
+
+                // Don't fail the job for Slack errors - label was already applied
+                console.log('Label was applied successfully, continuing despite Slack notification failure...');
+              }
+
+              console.log('✅ Triage process completed');
               
   slack-notify:
       name: Apply Label and Send Slack Notification
@@ -154,7 +258,9 @@ jobs:
           uses: actions/github-script@v7
           env:
             SLACK_DATADOG_AGENT_BOT_TOKEN: ${{ secrets.SLACK_DATADOG_AGENT_BOT_TOKEN }}
-            LABEL: ${{ steps.label.output.assigned_label }}
+            TEAM: ${{ steps.label.outputs.team }}
+            CONFIDENCE: ${{ needs.determine-team.outputs.confidence }}
+            EXPLANATION: ${{ needs.determine-team.outputs.explanation }}
           with:
             script: |
               const fs = require('fs');
@@ -188,7 +294,9 @@ jobs:
 
               // Get issue details
               const issue = context.payload.issue;
-              const teamName = process.env.LABEL;
+              const teamName = process.env.TEAM;
+              const confidence = process.env.CONFIDENCE;
+              const explanation = process.env.EXPLANATION;
 
               console.log(`Processing triage for issue #${issue.number} Team: ${teamName}`);
 
@@ -198,14 +306,23 @@ jobs:
                 const slack = new WebClient(process.env.SLACK_DATADOG_AGENT_BOT_TOKEN);
 
                 // Find appropriate channel (same logic as tasks/issue.py line 36)
-                const channel = slackMapping[teamName.toLowerCase()] || defaultChannel;
+                //const channel = slackMapping[teamName.toLowerCase()] || defaultChannel;
+                const channel = 'celian-tests';
+                // Create confidence emoji
+                const confidenceEmojis = {
+                  'HIGH': ':white_check_mark:',
+                  'MEDIUM': ':warning:',
+                  'LOW': ':question:'
+                };
+                const confidenceEmoji = confidenceEmojis[confidence] || ':robot_face:';
 
                 // Create message (similar format to tasks/issue.py lines 37-43)
                 let message = `:githubstatus_partial_outage: *New Community Issue*
-              ${issue.title} <${issue.html_url}|${context.repo.repo}#${issue.number}>
+                ${issue.title} <${issue.html_url}|${context.repo.repo}#${issue.number}>
 
-              **Auto-assigned to team/${teamName}**
-              `;
+                ${confidenceEmoji} **Auto-assigned to team/${teamName}** (Confidence: ${confidence})
+                **Analysis:** ${explanation}
+                `;
 
                 // Handle default channel case (similar to tasks/issue.py lines 38-43)
                 if (channel === defaultChannel && !slackMapping[teamName.toLowerCase()]) {
