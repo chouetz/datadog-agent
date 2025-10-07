@@ -25,6 +25,8 @@ jobs:
         - name: Intelligent Issue Triage
           id: claude
           uses: anthropics/claude-code-action@v1
+          env:
+            SLACK_TOKEN: ${{ secrets.SLACK_DATADOG_AGENT_BOT_TOKEN}}
           with:
             anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
             github_token: ${{ secrets.GITHUB_TOKEN }}
@@ -39,6 +41,7 @@ jobs:
               **Title:** ${{ github.event.issue.title }}
               **Number:** #${{ github.event.issue.number }}
               **Author:** @${{ github.event.issue.user.login }}
+              **URL:** ${{ github.event.issue.url }}
               **Body:**
               ```
               ${{ github.event.issue.body }}
@@ -73,28 +76,46 @@ jobs:
               2. Select exactly one team label
               3. Generate explanatory comment of the choice you did
               4. If uncertain, apply `team/agent-devx` and request manual review
-              5. Apply the selected labels:
+              5. Apply the selected labels using the **Apply label** section below
+              6. Post a message to the Slack channel #celian-tests using the **Post Slack** section below
+                 
+               **IMPORTANT:**
+               - For `team=`, provide ONLY the team name without "team/" prefix (e.g., "container-platform", not "team/container-platform")
+               - Use HIGH confidence if you're very sure, MEDIUM if reasonably sure, LOW if uncertain
+               - Keep explanation under 100 characters
+               
+               ## Apply label
+               Use gh issue edit to apply your selected labels
+               DO NOT post any comments explaining your decision
+               DO NOT communicate directly with users
+               If no labels are clearly applicable, do not apply any labels
 
-              Use gh issue edit to apply your selected labels
-              DO NOT post any comments explaining your decision
-              DO NOT communicate directly with users
-              If no labels are clearly applicable, do not apply any labels
-              
+               ## Post Slack 
+               Use the SLACK_TOKEN from environ to post the message. The format of the message must be the following:
+               `:githubstatus_partial_outage: *New Community Issue*
+               ${ISSUE_TITLE} <${ISSUE_URL}|${REPOSITORY_NAME}#${ISSUE_NUMBER}>
+               ${CONFIDENCE_EMOJI} **Auto-assigned to team/${TEAM_DECISION}** (Confidence: ${CONFIDENCE_DECISION})
+               **Analysis:** ${EXPLANATION_DECISION}
+               `;
+               Replace names in ${} by their values:
+               - ISSUE_TITLE, ISSUE_URL, REPOSITORY_NAME, ISSUE_NUMBER are retrieved from the github context.
+               - TEAM_DECISION, CONFIDENCE_DECISION and EXPLANATION_DECISION are the ones you generated.
+               - For CONFIDENCE_EMOJI, use this mapping from the CONFIDENCE_DECISION value: {
+                  'HIGH': ':white_check_mark:',
+                  'MEDIUM': ':warning:',
+                  'LOW': ':question:'
+                } 
+               
                ## Output Format
-              At the end of your analysis, provide a summary in this exact format:
+               At the end of your analysis, provide a summary in this exact format:
 
-              TEAM_DECISION: team_name_only
-              CONFIDENCE_DECISION: HIGH|MEDIUM|LOW
-              EXPLANATION_DECISION: Brief explanation of why this team was chosen
+               TEAM_DECISION: team_name_only
+               CONFIDENCE_DECISION: HIGH|MEDIUM|LOW
+               EXPLANATION_DECISION: Brief explanation of why this team was chosen
 
-              Make sure these three lines appear at the very end of your response
+               Make sure these three lines appear at the very end of your response
 
-              **IMPORTANT:**
-              - For `team=`, provide ONLY the team name without "team/" prefix (e.g., "container-platform", not "team/container-platform")
-              - Use HIGH confidence if you're very sure, MEDIUM if reasonably sure, LOW if uncertain
-              - Keep explanation under 100 characters
-
-              Start your analysis now and ensure you create the GitHub Action outputs.
+               Start your analysis now and ensure you create the GitHub Action outputs.
               
   slack-notify:
       name: Apply Label and Send Slack Notification
