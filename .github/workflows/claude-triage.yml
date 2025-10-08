@@ -152,7 +152,7 @@ jobs:
                 let message = `:githubstatus_partial_outage: *New Community Issue*
               ${issue.title} <${issue.html_url}|${context.repo.repo}#${issue.number}>
 
-              ${confidenceEmoji} *Auto-assigned* to `team/${teamName}` (Confidence: ${confidence})
+              ${confidenceEmoji} *Auto-assigned* to \`team/${teamName}\` (Confidence: ${confidence})
               *Analysis:* ${explanation}
               `;
 
