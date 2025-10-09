@@ -28,7 +28,7 @@ jobs:
           with:
             anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
             github_token: ${{ secrets.GITHUB_TOKEN }}
-            claude_args : --allowedTools "Read,Write,Bash(gh issue edit:*)"
+            claude_args : --allowedTools "Read,Write,Bash(gh issue edit [0-9]+ --add-label:*)"
             prompt: |
               # Datadog Agent - Intelligent Issue Triage System
 
