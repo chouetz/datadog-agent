@@ -1,12 +1,8 @@
 {
   "$schema": "https://docs.renovatebot.com/renovate-schema.json",
   "extends": [
-    "config:base",
-    ":dependencyDashboard",
-    ":semanticPrefixFixDepsChoreOthers",
-    ":ignoreModulesAndTests"
+    "config:recommended"
   ],
-  "enabledManagers": ["custom.regex", "pre-commit", "gomod", "github-actions", "dockerfile", "maven"],
   "labels": ["dependencies", "changelog/no-changelog", "qa/no-code-change"],
   "stopUpdatingLabel": "stop-updating",
   "platformCommit": "enabled",
@@ -37,106 +33,6 @@
       "matchDepNames": ["DataDog/datadog-agent-dev"],
       "changelogUrl": "https://github.com/DataDog/datadog-agent-dev/releases/tag/v{{newValue}}",
       "schedule": ["* 1-4 5 6,12 *"]
-    },
-    {
-      "description": "Go module updates - group by package for single PRs",
-      "matchManagers": ["gomod"],
-      "matchPaths": ["!internal/tools/**"],
-      "labels": ["dependencies", "dependencies-go", "changelog/no-changelog"],
-      "schedule": ["after 6am and before 6pm on saturday"],
-      "semanticCommitType": "chore",
-      "semanticCommitScope": "deps",
-      "ignoreUnstable": true,
-      "respectLatest": true,
-      "rangeStrategy": "bump",
-      "groupName": "go-dependencies",
-      "groupSlug": "go-deps",
-      "separateMultipleMajor": true,
-      "separateMinorPatch": false,
-      "prConcurrentLimit": 5,
-      "prHourlyLimit": 2,
-      "allowedVersions": "!/alpha|beta|rc/",
-      "vulnerabilityAlerts": {
-        "enabled": true,
-        "schedule": ["at any time"],
-        "prCreation": "immediate"
-      }
-    },
-    {
-      "description": "Go module groups - create single PRs for related packages",
-      "matchManagers": ["gomod"],
-      "matchPaths": ["!internal/tools/**"],
-      "groupName": "{{groupSlug}}",
-      "groupSlug": "go-{{depName}}",
-      "matchPackagePatterns": [
-        "^github\\.com/twmb/franz-go",
-        "^github\\.com/uptrace/bun",
-        "^github\\.com/aws/aws-sdk-go-v2",
-        "^k8s\\.io/"
-      ]
-    },
-    {
-      "description": "K8s.io packages - patch updates only",
-      "matchPackagePatterns": ["^k8s\\.io/"],
-      "matchUpdateTypes": ["minor", "major"],
-      "enabled": false
-    },
-    {
-      "description": "Internal tools - separate handling with monthly updates",
-      "matchPaths": ["internal/tools/**"],
-      "matchManagers": ["gomod"],
-      "labels": [
-        "dependencies",
-        "dependencies-go",
-        "dependencies-go-tools",
-        "dev/tooling",
-        "team/agent-devx",
-        "changelog/no-changelog",
-        "qa/no-code-change"
-      ],
-      "schedule": ["before 6am on sunday"],
-      "prConcurrentLimit": 2,
-      "groupName": "internal-tools",
-      "ignoreDeps": ["golang.org/x/*"]
-    },
-    {
-      "description": "GitHub Actions updates",
-      "matchManagers": ["github-actions"],
-      "labels": [
-        "dependencies",
-        "dependencies-github-actions",
-        "team/agent-devx",
-        "changelog/no-changelog",
-        "qa/no-code-change",
-        "dev/tooling"
-      ],
-      "schedule": ["after 6am and before 6pm on sunday"],
-      "groupName": "github-actions"
-    },
-    {
-      "description": "Docker updates",
-      "matchManagers": ["dockerfile"],
-      "labels": [
-        "dependencies",
-        "team/agent-e2e-test",
-        "changelog/no-changelog",
-        "qa/no-code-change",
-        "dev/testing"
-      ],
-      "schedule": ["after 6am and before 6pm on sunday"]
-    },
-    {
-      "description": "Maven updates for BouncyCastle FIPS",
-      "matchManagers": ["maven"],
-      "matchPaths": ["Dockerfiles/agent/bouncycastle-fips/**"],
-      "labels": [
-        "dependencies",
-        "team/agent-metric-pipelines",
-        "changelog/no-changelog"
-      ],
-      "schedule": ["after 6am and before 6pm on sunday"],
-      "ignoreDeps": ["org.bouncycastle:*"],
-      "allowedVersions": "<2.1"
     }
   ],
   "pre-commit": {
@@ -219,9 +115,5 @@
         "{\"releases\": $map(results, function($v) { {\"version\": $v.name, \"releaseTimestamp\": $v.last_updated } }) }"
       ]
     }
-  },
-  "vulnerabilityAlerts": {
-    "enabled": true,
-    "schedule": ["at any time"]
   }
 }
