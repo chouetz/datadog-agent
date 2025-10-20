@@ -115,7 +115,7 @@
     },
     {
       "description": "Docker updates",
-      "matchManagers": ["docker"],
+      "matchManagers": ["dockerfile"],
       "labels": [
         "dependencies",
         "team/agent-e2e-test",
