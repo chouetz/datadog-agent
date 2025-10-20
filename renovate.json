@@ -6,7 +6,7 @@
     ":semanticPrefixFixDepsChoreOthers",
     ":ignoreModulesAndTests"
   ],
-  "enabledManagers": ["custom.regex", "pre-commit", "gomod", "github-actions", "docker", "maven"],
+  "enabledManagers": ["custom.regex", "pre-commit", "gomod", "github-actions", "dockerfile", "maven"],
   "labels": ["dependencies", "changelog/no-changelog", "qa/no-code-change"],
   "stopUpdatingLabel": "stop-updating",
   "platformCommit": "enabled",
@@ -59,7 +59,7 @@
       "vulnerabilityAlerts": {
         "enabled": true,
         "schedule": ["at any time"],
-        "prPriority": 10
+        "prCreation": "immediate"
       }
     },
     {
