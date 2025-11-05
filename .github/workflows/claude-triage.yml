@@ -8,6 +8,12 @@ on:
       - 'main'
     paths:
       - '.github/workflows/claude-triage.yml'
+  workflow_dispatch:
+    inputs:
+      issue_number:
+        description: 'Issue number to triage'
+        required: true
+        type: number
 
 permissions:
     issues: write
@@ -18,7 +24,36 @@ jobs:
       runs-on: ubuntu-latest
       environment:
         name: main
-      steps:
+      steps:        
+        - name: Get issue details
+          id: get-issue
+          uses: actions/github-script@f28e40c7f34bde8b3046d885e986cb6290c5673b # v7.1.0
+          with:
+            script: |
+              let issue;
+              if (context.eventName === 'workflow_dispatch') {
+                // Fetch issue details when manually triggered
+                const issueNumber = ${{ github.event.inputs.issue_number || 'null' }};
+                const response = await github.rest.issues.get({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: issueNumber
+              });
+                issue = response.data;
+              } else {
+                // Use issue from event payload
+                issue = context.payload.issue;
+              }
+
+              // Set outputs for use in later steps
+              core.setOutput('title', issue.title);
+              core.setOutput('number', issue.number);
+              core.setOutput('author', issue.user.login);
+              core.setOutput('url', issue.html_url);
+              core.setOutput('body', issue.body || '');
+
+              return issue;
+
         - name: Checkout repository
           uses: actions/checkout@v4
 
@@ -36,13 +71,13 @@ jobs:
               You are an expert triage system for the Datadog Agent repository. Your job is to analyze this GitHub issue and determine which team should handle it. You have full access to the Datadog Agent codebase and can use all available tools to analyze issues.
 
               ## Current Issue
-              **Title:** ${{ github.event.issue.title }}
-              **Number:** #${{ github.event.issue.number }}
-              **Author:** @${{ github.event.issue.user.login }}
-              **URL:** ${{ github.event.issue.url }}
+              **Title:** ${{ steps.get-issue.outputs.title }}
+              **Number:** #${{ steps.get-issue.outputs.number }}
+              **Author:** @${{ steps.get-issue.outputs.author }}
+              **URL:** ${{ steps.get-issue.outputs.url }}
               **Body:**
               ```
-              ${{ github.event.issue.body }}
+              ${{ steps.get-issue.outputs.body }}
               ```
 
               ## Analysis Protocol
@@ -122,13 +157,21 @@ jobs:
             TEAM: ${{ steps.extract-label.outputs.team }}
             SLACK: ${{ steps.extract-label.outputs.slack }}
             CONFIDENCE: ${{ steps.extract-label.outputs.confidence }}
-            EXPLANATION: ${{ steps.extract-label.outputs.explanation }}
+            EXPLANATION: ${{ steps.extract-label.outputs.explanation }}    
+            ISSUE_TITLE: "${{ steps.get-issue.outputs.title }}"
+            ISSUE_NUMBER: "${{ steps.get-issue.outputs.number }}"
+            ISSUE_URL: "${{ steps.get-issue.outputs.url }}"
           with:
             script: |
               const { WebClient } = require('@slack/web-api');
 
               // Get issue details
-              const issue = context.payload.issue;
+              // Get issue details from environment (works for both event types)
+              const issue = {
+                title: process.env.ISSUE_TITLE,
+                number: process.env.ISSUE_NUMBER,
+                html_url: process.env.ISSUE_URL
+              };
               const teamName = process.env.TEAM;
               const channel = process.env.SLACK;
               const confidence = process.env.CONFIDENCE;
@@ -159,7 +202,7 @@ jobs:
                   message += "\nYour team was assigned automatically using :claude: analysis.\nPlease redirect if the assignment is incorrect.";
 
                 const response = await slack.chat.postMessage({
-                  channel: channel,
+                  channel: 'celian-tests',
                   text: message
                 });
 
