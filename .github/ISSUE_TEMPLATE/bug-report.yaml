@@ -1,5 +1,5 @@
 ---
-name: Generic Issue
+name: Generic Issue (Requires clean, generic reproduction)
 description: "If the issue requires extensive logs, flares, or environment debugging, please open a Support ticket using the 'Support Request' option above."
 title: "[BUG] "
 labels: bug,pending
