@@ -4,7 +4,7 @@
       "config:best-practices",
       ":separateMultipleMajorReleases"
     ],
-    "enabledManagers": ["gomod", "custom.regex", "pre-commit", "docker", "github-actions", "maven"],
+    "enabledManagers": ["gomod", "custom.regex", "pre-commit", "dockerfile", "github-actions", "maven"],
     "labels": ["dependencies", "changelog/no-changelog", "qa/no-code-change"],
     "stopUpdatingLabel": "stop-updating",
     "platformCommit": "enabled",
