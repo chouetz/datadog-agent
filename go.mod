@@ -393,7 +393,7 @@ require (
 	golang.org/x/mod v0.34.0
 	golang.org/x/net v0.52.0
 	golang.org/x/sync v0.20.0
-	golang.org/x/sys v0.42.0
+	golang.org/x/sys v0.46.0
 	golang.org/x/text v0.35.0
 	golang.org/x/time v0.14.0
 	golang.org/x/tools v0.43.0
@@ -1222,7 +1222,7 @@ replace go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelg
 
 replace github.com/pahanini/go-grpc-bidirectional-streaming-example v0.0.0-20211027164128-cc6111af44be => github.com/DataDog/go-grpc-bidirectional-streaming-example v0.0.0-20221024060302-b9cf785c02fe
 
-replace github.com/vishvananda/netlink => github.com/DataDog/netlink v1.0.1-0.20240223195320-c7a4f832a3d1
+replace github.com/vishvananda/netlink => github.com/DataDog/netlink v1.0.1-0.20260820151102-1d2f3c553734
 
 // use datadog fork of vault/api/auth/aws to reduce binary size for secret-generic-connector
 replace github.com/hashicorp/vault/api/auth/aws => github.com/DataDog/vault/api/auth/aws v0.0.0-20250716193101-44fb30472101
